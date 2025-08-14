@@ -1,0 +1,117 @@
+name: MyJantes Manager - Flutter Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build_android:
+    name: Build Android APK & AAB
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+        
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.0'
+        channel: 'stable'
+        
+    - name: Install Dependencies
+      run: flutter pub get
+      
+    - name: Run Tests
+      run: flutter test
+      
+    - name: Build APK (Release)
+      run: flutter build apk --release
+      
+    - name: Build APK (Split per ABI)
+      run: flutter build apk --split-per-abi --release
+      
+    - name: Build App Bundle (AAB)
+      run: flutter build appbundle --release
+      
+    - name: Upload Android Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-builds
+        path: |
+          build/app/outputs/flutter-apk/*.apk
+          build/app/outputs/bundle/release/*.aab
+        retention-days: 30
+
+  build_ios:
+    name: Build iOS IPA
+    runs-on: macos-13
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.0'
+        channel: 'stable'
+        
+    - name: Install Dependencies
+      run: flutter pub get
+      
+    - name: Install CocoaPods
+      run: cd ios && pod install
+      
+    - name: Build iOS (Release - No Code Sign)
+      run: flutter build ios --release --no-codesign
+      
+    - name: Create IPA
+      run: |
+        mkdir -p build/ios/ipa
+        cd build/ios/iphoneos
+        zip -r ../ipa/MyJantes_Manager.ipa Runner.app
+        
+    - name: Upload iOS Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-build
+        path: |
+          build/ios/ipa/*.ipa
+        retention-days: 30
+
+  build_web:
+    name: Build Web Version
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.0'
+        channel: 'stable'
+        
+    - name: Install Dependencies
+      run: flutter pub get
+      
+    - name: Build Web (Release)
+      run: flutter build web --release
+      
+    - name: Upload Web Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-build
+        path: build/web/
+        retention-days: 30
