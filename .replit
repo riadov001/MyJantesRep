@@ -4,7 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
-packages = ["flutter", "android-tools", "zip"]
+packages = ["flutter", "android-tools", "zip", "got"]
 
 [workflows]
 runButton = "Project"
