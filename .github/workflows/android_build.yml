@@ -29,11 +29,14 @@ jobs:
     - name: Install dependencies
       run: flutter pub get
       
-    - name: Build Android APK
-      run: flutter build apk --release
+    - name: Build Android APK (Debug)
+      run: flutter build apk --debug
       
-    - name: Build Android App Bundle (AAB)
-      run: flutter build appbundle --release
+    - name: Build Android APK (Release - no signing)
+      run: flutter build apk --release --no-shrink
+      
+    - name: Build Android App Bundle (Release - no signing)
+      run: flutter build appbundle --release --no-shrink
       
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
