@@ -1,60 +1,56 @@
 workflows:
   android-build:
-    name: Android APK Build (Sans Signature)
+    name: Android Build
     max_build_duration: 30
+    instance_type: mac_mini_m1
     environment:
-      flutter: stable
-      vars:
-        JAVA_TOOL_OPTIONS: "-Xmx3g"
-    scripts:
-      - name: Get dependencies
-        script: flutter pub get
-      - name: Build APK Debug
-        script: flutter build apk --debug
-      - name: Build APK Release (unsigned)
-        script: flutter build apk --release --no-shrink
-        ignore_failure: true
-    artifacts:
-      - build/app/outputs/flutter-apk/*.apk
-    publishing:
-      email:
-        recipients:
-          - user@example.com
-        notify:
-          success: true
-          failure: true
-
-  ios-build:
-    name: MyJantes iOS (Sans Mac)
-    max_build_duration: 60
-    environment:
+      android_signing:
+        - keystore_reference
+      groups:
+        - google_play
       flutter: stable
       xcode: latest
       cocoapods: default
     scripts:
-      - name: Clean environment
-        script: flutter clean
-      - name: Get dependencies
-        script: flutter pub get
-      - name: Install pods
-        script: cd ios && pod install
-      - name: Build iOS
-        script: flutter build ios --release --no-codesign
-      - name: Archive IPA
+      - name: Set up debug keystore
         script: |
-          mkdir -p build/ios/ipa
-          cd build/ios/iphoneos
-          zip -r ../ipa/MyJantes_Manager_v1.0.ipa Runner.app
-      - name: Verify IPA
-        script: |
-          ls -la build/ios/ipa/
-          file build/ios/ipa/*.ipa
+          echo "Creating debug keystore..."
+          keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+      - name: Get Flutter dependencies
+        script: flutter packages pub get
+      - name: Build Android APK
+        script: flutter build apk --debug --verbose
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/app/outputs/flutter-apk/app-debug.apk
     publishing:
       email:
         recipients:
-          - user@example.com
-        notify:
-          success: true
-          failure: true
+          - riadov001@gmail.com
+
+  ios-build:
+    name: iOS Build  
+    max_build_duration: 30
+    instance_type: mac_mini_m1
+    environment:
+      ios_signing:
+        distribution_type: development
+        bundle_identifier: com.myjantes.manager
+      groups:
+        - app_store_connect
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter packages pub get
+      - name: Install pods
+        script: |
+          cd ios && pod install
+      - name: Build iOS without signing
+        script: flutter build ios --no-codesign --verbose
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+    publishing:
+      email:
+        recipients:
+          - riadov001@gmail.com
