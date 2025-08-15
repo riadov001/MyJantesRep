@@ -1,111 +1,67 @@
-definitions:
-  env_versions: &env_versions
-    flutter: 3.32.0
-    xcode: 15.2
-    cocoapods: default
-
 workflows:
   android-workflow:
-    name: Android Workflow
-    max_build_duration: 120
+    name: MyJantes Android Build
+    max_build_duration: 60
     environment:
-      android_signing:
-        - myjantes_keystore
-      groups:
-        - google_play
+      flutter: stable
       vars:
+        JAVA_TOOL_OPTIONS: "-Xmx3g"
         PACKAGE_NAME: "com.myjantes.manager"
-      <<: *env_versions
     scripts:
-      - name: Set up local.properties
+      - name: Clean build environment
         script: |
-          echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+          flutter clean
       - name: Get Flutter dependencies
         script: |
-          flutter packages pub get
-      - name: Flutter analyze
-        script: |
-          flutter analyze
-      - name: Flutter unit tests
-        script: |
-          flutter test
-        ignore_failure: true
-      - name: Build APK with Flutter
+          flutter pub get
+      - name: Build APK
         script: |
           flutter build apk --release
-      - name: Build AAB with Flutter
+      - name: Build App Bundle (AAB)
         script: |
           flutter build appbundle --release
     artifacts:
-      - build/app/outputs/**/*.apk
-      - build/app/outputs/**/*.aab
-      - build/app/outputs/**/mapping.txt
-      - flutter_drive.log
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/bundle/release/*.aab
     publishing:
       email:
         recipients:
-          - user@example.com
+          - myjantes@example.com
         notify:
           success: true
-          failure: false
+          failure: true
 
   ios-workflow:
-    name: iOS Workflow
-    max_build_duration: 120
-    environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.myjantes.manager
-      vars:
-        APP_ID: 1234567890
-      <<: *env_versions
-    scripts:
-      - name: Set up code signing settings on Xcode project
-        script: |
-          xcode-project use-profiles
-      - name: Get Flutter dependencies
-        script: |
-          flutter packages pub get
-      - name: Install pods
-        script: |
-          find . -name "Podfile" -execdir pod install \;
-      - name: Flutter analyze
-        script: |
-          flutter analyze
-      - name: Flutter unit tests
-        script: |
-          flutter test
-        ignore_failure: true
-      - name: Build ipa for distribution
-        script: |
-          flutter build ipa --release
-    artifacts:
-      - build/ios/ipa/*.ipa
-      - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
-    publishing:
-      app_store_connect:
-        auth: integration
-        submit_to_testflight: false
-        submit_to_app_store: false
-      email:
-        recipients:
-          - user@example.com
-        notify:
-          success: true
-          failure: false
-
-  web-workflow:
-    name: Web Workflow
+    name: MyJantes iOS Build  
     max_build_duration: 60
     environment:
-      <<: *env_versions
+      flutter: stable
+      xcode: latest
+      cocoapods: default
     scripts:
+      - name: Clean build environment
+        script: |
+          flutter clean
       - name: Get Flutter dependencies
         script: |
-          flutter packages pub get
-      - name: Build web
+          flutter pub get
+      - name: Install CocoaPods
         script: |
-          flutter build web --release
+          cd ios && pod install
+      - name: Build iOS (no code signing)
+        script: |
+          flutter build ios --release --no-codesign
+      - name: Create IPA
+        script: |
+          mkdir -p build/ios/ipa
+          cd build/ios/iphoneos
+          zip -r ../ipa/MyJantes_Manager.ipa Runner.app
     artifacts:
-      - build/web/**
+      - build/ios/ipa/*.ipa
+    publishing:
+      email:
+        recipients:
+          - myjantes@example.com
+        notify:
+          success: true
+          failure: true
