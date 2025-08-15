@@ -1,0 +1,69 @@
+name: iOS Build (Alternative à Codemagic)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build_ios:
+    name: Build iOS IPA
+    runs-on: macos-13
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: 'stable'
+        channel: 'stable'
+        
+    - name: Install dependencies
+      run: flutter pub get
+      
+    - name: Install CocoaPods
+      run: |
+        cd ios
+        pod install
+        
+    - name: Build iOS (no code signing)
+      run: |
+        flutter build ios --release --no-codesign
+        
+    - name: Create IPA file
+      run: |
+        mkdir -p build/ios/ipa
+        cd build/ios/iphoneos
+        zip -r ../ipa/MyJantes_Manager.ipa Runner.app
+        
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyJantes-iOS-App
+        path: build/ios/ipa/*.ipa
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ios-v${{ github.run_number }}
+        name: MyJantes Manager iOS v${{ github.run_number }}
+        body: |
+          🚀 Application iOS MyJantes Manager
+          
+          **Installation :**
+          1. Téléchargez le fichier .ipa
+          2. Utilisez Sideloadly ou AltStore pour installer
+          3. Faites confiance au certificat dans Réglages iPhone
+          
+          **Fonctionnalités :**
+          - Interface utilisateur complète
+          - 6 services de rénovation de jantes
+          - Système de réservation et devis
+          - Thème noir et rouge professionnel
+        files: build/ios/ipa/*.ipa
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

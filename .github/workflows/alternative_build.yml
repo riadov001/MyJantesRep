@@ -1,0 +1,99 @@
+name: Alternative Build (Faster machines)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  android-urgent:
+    name: Android APK (Urgent)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.0'
+        channel: 'stable'
+        cache: true
+    
+    - name: Create debug keystore
+      run: |
+        mkdir -p android/app
+        keytool -genkey -v -keystore android/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+    
+    - name: Get dependencies
+      run: flutter pub get
+    
+    - name: Build APK Debug
+      run: flutter build apk --debug --verbose
+    
+    - name: Build APK Release (unsigned)
+      run: flutter build apk --release --verbose
+      continue-on-error: true
+    
+    - name: Upload APK Debug
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyJantes-Manager-debug.apk
+        path: build/app/outputs/flutter-apk/app-debug.apk
+        retention-days: 30
+    
+    - name: Upload APK Release
+      uses: actions/upload-artifact@v4
+      if: success()
+      with:
+        name: MyJantes-Manager-release.apk
+        path: build/app/outputs/flutter-apk/app-release.apk
+        retention-days: 30
+
+  ios-urgent:
+    name: iOS IPA (Urgent)
+    runs-on: macos-13
+    timeout-minutes: 25
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.32.0'
+        channel: 'stable'
+        cache: true
+    
+    - name: Get dependencies
+      run: flutter pub get
+    
+    - name: Setup iOS (no signing)
+      run: |
+        cd ios
+        /usr/libexec/PlistBuddy -c "Set :objects:13B07F961A680F5B00A75B9A:buildSettings:CODE_SIGNING_REQUIRED NO" Runner.xcodeproj/project.pbxproj
+        /usr/libexec/PlistBuddy -c "Set :objects:13B07F961A680F5B00A75B9A:buildSettings:CODE_SIGNING_ALLOWED NO" Runner.xcodeproj/project.pbxproj
+    
+    - name: Build iOS (no codesign)
+      run: flutter build ios --no-codesign --verbose
+    
+    - name: Create IPA
+      run: |
+        cd build/ios/iphoneos
+        mkdir -p Payload
+        cp -r Runner.app Payload/
+        zip -r MyJantes-Manager.ipa Payload/
+    
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: MyJantes-Manager.ipa
+        path: build/ios/iphoneos/MyJantes-Manager.ipa
+        retention-days: 30
