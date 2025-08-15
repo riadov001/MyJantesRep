@@ -1,67 +1,24 @@
 workflows:
-  android-workflow:
-    name: MyJantes Android Build
-    max_build_duration: 60
+  android-build:
+    name: Android APK Build
+    max_build_duration: 30
     environment:
       flutter: stable
       vars:
         JAVA_TOOL_OPTIONS: "-Xmx3g"
-        PACKAGE_NAME: "com.myjantes.manager"
     scripts:
-      - name: Clean build environment
-        script: |
-          flutter clean
-      - name: Get Flutter dependencies
+      - name: Get dependencies
         script: |
           flutter pub get
       - name: Build APK
         script: |
           flutter build apk --release
-      - name: Build App Bundle (AAB)
-        script: |
-          flutter build appbundle --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-      - build/app/outputs/bundle/release/*.aab
     publishing:
       email:
         recipients:
-          - myjantes@example.com
-        notify:
-          success: true
-          failure: true
-
-  ios-workflow:
-    name: MyJantes iOS Build  
-    max_build_duration: 60
-    environment:
-      flutter: stable
-      xcode: latest
-      cocoapods: default
-    scripts:
-      - name: Clean build environment
-        script: |
-          flutter clean
-      - name: Get Flutter dependencies
-        script: |
-          flutter pub get
-      - name: Install CocoaPods
-        script: |
-          cd ios && pod install
-      - name: Build iOS (no code signing)
-        script: |
-          flutter build ios --release --no-codesign
-      - name: Create IPA
-        script: |
-          mkdir -p build/ios/ipa
-          cd build/ios/iphoneos
-          zip -r ../ipa/MyJantes_Manager.ipa Runner.app
-    artifacts:
-      - build/ios/ipa/*.ipa
-    publishing:
-      email:
-        recipients:
-          - myjantes@example.com
+          - user@example.com
         notify:
           success: true
           failure: true
