@@ -8,13 +8,46 @@ workflows:
         JAVA_TOOL_OPTIONS: "-Xmx3g"
     scripts:
       - name: Get dependencies
-        script: |
-          flutter pub get
+        script: flutter pub get
       - name: Build APK
-        script: |
-          flutter build apk --release
+        script: flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+    publishing:
+      email:
+        recipients:
+          - user@example.com
+        notify:
+          success: true
+          failure: true
+
+  ios-build:
+    name: MyJantes iOS (Sans Mac)
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Clean environment
+        script: flutter clean
+      - name: Get dependencies
+        script: flutter pub get
+      - name: Install pods
+        script: cd ios && pod install
+      - name: Build iOS
+        script: flutter build ios --release --no-codesign
+      - name: Archive IPA
+        script: |
+          mkdir -p build/ios/ipa
+          cd build/ios/iphoneos
+          zip -r ../ipa/MyJantes_Manager_v1.0.ipa Runner.app
+      - name: Verify IPA
+        script: |
+          ls -la build/ios/ipa/
+          file build/ios/ipa/*.ipa
+    artifacts:
+      - build/ios/ipa/*.ipa
     publishing:
       email:
         recipients:
